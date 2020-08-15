@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "turfwars",
+  "version": "${version}",
+  "name": "Turf Wars",
+  "description": "turf wars",
+  "authors": [
+    "Draylar"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "draylar.tw.TurfWars"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.9.1",
+    "fabric": "*",
+    "minecraft": "1.16.2",
+    "plasmid": "0.2.x"
+  }
+}
