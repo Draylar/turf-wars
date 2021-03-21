@@ -1,6 +1,6 @@
 package draylar.tw.game.map;
 
-import xyz.nucleoid.plasmid.game.map.template.MapTemplate;
+import xyz.nucleoid.plasmid.map.template.MapTemplate;
 import xyz.nucleoid.plasmid.util.BlockBounds;
 import net.minecraft.block.Blocks;
 import net.minecraft.util.Util;
@@ -32,11 +32,7 @@ public class TurfWarsMapGenerator {
         this.config = config;
     }
 
-    public CompletableFuture<TurfWarsMap> create() {
-        return CompletableFuture.supplyAsync(this::build, Util.getMainWorkerExecutor());
-    }
-
-    private TurfWarsMap build() {
+    public TurfWarsMap build() {
         MapTemplate template = MapTemplate.createEmpty();
         TurfWarsMap map = new TurfWarsMap(template, this.config);
 

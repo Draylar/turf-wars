@@ -6,7 +6,7 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.DyeableArmorItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import xyz.nucleoid.plasmid.game.GameWorld;
+import xyz.nucleoid.plasmid.game.GameSpace;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -20,11 +20,11 @@ import xyz.nucleoid.plasmid.util.ItemStackBuilder;
 
 public class TurfWarsSpawnLogic {
 
-    private final GameWorld gameWorld;
+    private final GameSpace gameSpace;
     private final TurfWarsMap map;
 
-    public TurfWarsSpawnLogic(GameWorld gameWorld, TurfWarsMap map) {
-        this.gameWorld = gameWorld;
+    public TurfWarsSpawnLogic(GameSpace gameSpace, TurfWarsMap map) {
+        this.gameSpace = gameSpace;
         this.map = map;
     }
 
@@ -81,7 +81,7 @@ public class TurfWarsSpawnLogic {
     }
 
     public void spawnPlayer(ServerPlayerEntity player) {
-        ServerWorld world = this.gameWorld.getWorld();
+        ServerWorld world = this.gameSpace.getWorld();
 
         BlockPos pos = this.map.spawn;
         if (pos == null) {
@@ -97,7 +97,7 @@ public class TurfWarsSpawnLogic {
     }
 
     public void spawnPlayer(ServerPlayerEntity player, Team team) {
-        ServerWorld world = this.gameWorld.getWorld();
+        ServerWorld world = this.gameSpace.getWorld();
 
         BlockPos pos = this.map.spawn;
         if (pos == null) {

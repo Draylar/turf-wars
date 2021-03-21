@@ -18,7 +18,8 @@ import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.hit.EntityHitResult;
-import xyz.nucleoid.plasmid.game.GameWorld;
+import xyz.nucleoid.plasmid.game.GameSpace;
+import xyz.nucleoid.plasmid.game.GameCloseReason;
 import xyz.nucleoid.plasmid.game.event.*;
 import xyz.nucleoid.plasmid.game.player.JoinResult;
 import xyz.nucleoid.plasmid.game.rule.GameRule;
@@ -51,7 +52,7 @@ import java.util.stream.Collectors;
 public class TurfWarsActive {
     private final TurfWarsConfig config;
 
-    public final GameWorld gameWorld;
+    public final GameSpace gameSpace;
     private final TurfWarsMap gameMap;
 
     // TODO replace with ServerPlayerEntity if players are removed upon leaving
@@ -66,11 +67,11 @@ public class TurfWarsActive {
     private int currentPhaseProgress = 0;
     private int maxPhaseTime = 60 * 20;
 
-    private TurfWarsActive(GameWorld gameWorld, TurfWarsMap map, TurfWarsConfig config, Set<PlayerRef> participants) {
-        this.gameWorld = gameWorld;
+    private TurfWarsActive(GameSpace gameSpace, TurfWarsMap map, TurfWarsConfig config, Set<PlayerRef> participants) {
+        this.gameSpace = gameSpace;
         this.config = config;
         this.gameMap = map;
-        this.spawnLogic = new TurfWarsSpawnLogic(gameWorld, map);
+        this.spawnLogic = new TurfWarsSpawnLogic(gameSpace, map);
         this.participants = new Object2ObjectOpenHashMap<>();
 
         List<PlayerRef> randomizedPlayers = new ArrayList<>(participants);
@@ -88,13 +89,13 @@ public class TurfWarsActive {
         this.timerBar = new TurfWarsTimerBar();
     }
 
-    public static void open(GameWorld gameWorld, TurfWarsMap map, TurfWarsConfig config) {
-        Set<PlayerRef> participants = gameWorld.getPlayers().stream()
+    public static void open(GameSpace gameSpace, TurfWarsMap map, TurfWarsConfig config) {
+        Set<PlayerRef> participants = gameSpace.getPlayers().stream()
                 .map(PlayerRef::of)
                 .collect(Collectors.toSet());
-        TurfWarsActive active = new TurfWarsActive(gameWorld, map, config, participants);
+        TurfWarsActive active = new TurfWarsActive(gameSpace, map, config, participants);
 
-        gameWorld.openGame(builder -> {
+        gameSpace.openGame(builder -> {
             builder.setRule(GameRule.CRAFTING, RuleResult.DENY);
             builder.setRule(GameRule.PORTALS, RuleResult.DENY);
             builder.setRule(GameRule.PVP, RuleResult.ALLOW);
@@ -122,7 +123,7 @@ public class TurfWarsActive {
     }
 
     private void onOpen() {
-        ServerWorld world = this.gameWorld.getWorld();
+        ServerWorld world = this.gameSpace.getWorld();
 
         for (PlayerRef ref : this.participants.keySet()) {
             ref.ifOnline(world, this::spawnParticipant);
@@ -147,12 +148,12 @@ public class TurfWarsActive {
         this.timerBar.addPlayer(player);
     }
 
-    private boolean onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
+    private ActionResult onPlayerDamage(ServerPlayerEntity player, DamageSource source, float amount) {
         if(source.getAttacker() != null && source.getAttacker() instanceof PlayerEntity) {
             this.spawnParticipant(player);
         }
 
-        return true;
+        return ActionResult.FAIL;
     }
 
     private ActionResult onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
@@ -197,10 +198,10 @@ public class TurfWarsActive {
     }
 
     private void tick() {
-        ServerWorld world = this.gameWorld.getWorld();
+        ServerWorld world = this.gameSpace.getWorld();
         long time = world.getTime();
 
-        TurfWarsIdle.IdleTickResult result = this.idle.tick(time, gameWorld);
+        TurfWarsIdle.IdleTickResult result = this.idle.tick(time, gameSpace);
 
         switch (result) {
             case CONTINUE_TICK:
@@ -211,7 +212,7 @@ public class TurfWarsActive {
                 this.broadcastWin(this.checkWinResult());
                 return;
             case GAME_CLOSED:
-                this.gameWorld.close();
+                this.gameSpace.close(GameCloseReason.FINISHED);
                 return;
         }
 
@@ -223,11 +224,11 @@ public class TurfWarsActive {
             isBuildTime = !isBuildTime;
 
             if(isBuildTime) {
-                broadcastMessage(new LiteralText("It is now build time!"), gameWorld);
+                broadcastMessage(new LiteralText("It is now build time!"), gameSpace);
                 timerBar.setPrefix("Build Time - ");
                 maxPhaseTime = 45 * 20;
             } else {
-                broadcastMessage(new LiteralText("It is battle time!"), gameWorld);
+                broadcastMessage(new LiteralText("It is battle time!"), gameSpace);
                 timerBar.setPrefix("Battle Time - ");
                 maxPhaseTime = 90 * 20;
             }
@@ -282,24 +283,24 @@ public class TurfWarsActive {
         });
     }
 
-    protected static void broadcastMessage(Text message, GameWorld world) {
-        for (ServerPlayerEntity player : world.getPlayers()) {
+    protected static void broadcastMessage(Text message, GameSpace space) {
+        for (ServerPlayerEntity player : space.getPlayers()) {
             player.sendMessage(message, false);
         };
     }
 
-    protected static void broadcastSound(SoundEvent sound, float pitch, GameWorld world) {
-        for (ServerPlayerEntity player : world.getPlayers()) {
+    protected static void broadcastSound(SoundEvent sound, float pitch, GameSpace space) {
+        for (ServerPlayerEntity player : space.getPlayers()) {
             player.playSound(sound, SoundCategory.PLAYERS, 1.0F, pitch);
         };
     }
 
-    protected static void broadcastSound(SoundEvent sound,  GameWorld world) {
-        broadcastSound(sound, 1.0f, world);
+    protected static void broadcastSound(SoundEvent sound,  GameSpace space) {
+        broadcastSound(sound, 1.0f, space);
     }
 
-    protected static void broadcastTitle(Text message, GameWorld world) {
-        for (ServerPlayerEntity player : world.getPlayers()) {
+    protected static void broadcastTitle(Text message, GameSpace space) {
+        for (ServerPlayerEntity player : space.getPlayers()) {
             TitleS2CPacket packet = new TitleS2CPacket(TitleS2CPacket.Action.TITLE, message, 1, 5,  3);
             player.networkHandler.sendPacket(packet);
         }
@@ -315,8 +316,8 @@ public class TurfWarsActive {
             message = new LiteralText("The game ended, but nobody won!").formatted(Formatting.GOLD);
         }
 
-        broadcastMessage(message, this.gameWorld);
-        broadcastSound(SoundEvents.ENTITY_VILLAGER_YES, this.gameWorld);
+        broadcastMessage(message, this.gameSpace);
+        broadcastSound(SoundEvents.ENTITY_VILLAGER_YES, this.gameSpace);
     }
 
     private WinResult checkWinResult() {
@@ -325,7 +326,7 @@ public class TurfWarsActive {
             return WinResult.no();
         }
 
-        ServerWorld world = this.gameWorld.getWorld();
+        ServerWorld world = this.gameSpace.getWorld();
         ServerPlayerEntity winningPlayer = null;
 
         // TODO win result logic
