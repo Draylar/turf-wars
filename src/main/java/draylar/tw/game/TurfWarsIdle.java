@@ -2,7 +2,7 @@ package draylar.tw.game;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import xyz.nucleoid.plasmid.game.GameWorld;
+import xyz.nucleoid.plasmid.game.GameSpace;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.LiteralText;
@@ -28,7 +28,7 @@ public class TurfWarsIdle {
         this.finishTime = this.startTime + (config.timeLimitSecs * 20);
     }
 
-    public IdleTickResult tick(long time, GameWorld world) {
+    public IdleTickResult tick(long time, GameSpace world) {
         // Game has finished. Wait a few seconds before finally closing the game.
         if (this.closeTime > 0) {
             if (time >= this.closeTime) {
@@ -60,7 +60,7 @@ public class TurfWarsIdle {
         return IdleTickResult.CONTINUE_TICK;
     }
 
-    private void tickStartWaiting(long time, GameWorld world) {
+    private void tickStartWaiting(long time, GameSpace world) {
         float sec_f = (this.startTime - time) / 20.0f;
 
         if (sec_f > 1) {
